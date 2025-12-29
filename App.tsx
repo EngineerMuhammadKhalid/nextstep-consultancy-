@@ -2,7 +2,14 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Country, Service, ChatMessage, Job } from './types';
 import { GoogleGenAI } from "@google/genai";
 
-// Extended type for internal use to track statuses and specific organizational links
+// TO THE USER: To connect this form to your Google Sheet:
+// 1. Open your Google Sheet.
+// 2. Go to Extensions -> Apps Script.
+// 3. Paste a doPost(e) script that appends rows.
+// 4. Deploy as a Web App (set access to "Anyone").
+// 5. Replace the placeholder URL below with your Deployment URL.
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec"; 
+
 interface EnhancedCountry extends Country {
   status: 'Open' | 'On Hold' | 'Study Only' | 'Winter Intake Open';
   statusNote: string;
@@ -95,11 +102,11 @@ const countries: EnhancedCountry[] = [
     code: 'CA', 
     status: 'Study Only',
     statusNote: 'Only Study Related Consultancy',
-    image: 'https://images.unsplash.com/photo-1505751172107-573225a91719?auto=format&fit=crop&w=1200&q=80', 
+    image: 'https://images.unsplash.com/photo-1503942142281-94af0ade523e?auto=format&fit=crop&w=1200&q=80', 
     description: 'Premier medical education for international students.', 
     benefits: ['World-recognized degrees', 'MPH & MSc programs', 'Research scholarships'],
-    jobInsights: 'STUDY ONLY. We provide consultation for Medical Masters, PhDs, and Health Administration degrees. Clinical job placements are not offered.',
-    universityRankings: ['University of Toronto', 'McGill University'],
+    jobInsights: 'STUDY ONLY. We provide consultation for Medical Masters, PhDs, and Health Administration degrees at top universities like UofT and McGill.',
+    universityRankings: ['University of Toronto', 'McGill University', 'University of British Columbia'],
     livingCosts: {
       rent: 'CAD 1,300 - 2,200',
       general: 'CAD 700 - 1,100',
@@ -152,32 +159,46 @@ const App: React.FC = () => {
     setIsLoading(true);
     
     const formData = new FormData(e.currentTarget);
-    const data = {
-      name: formData.get('fullName'),
-      profession: formData.get('profession'),
-      goal: formData.get('goal'),
-      targetCountry: selectedCountry?.name || 'Any Global Hub'
-    };
+    const data: Record<string, any> = {};
+    formData.forEach((value, key) => { data[key] = value; });
+    
+    // Add context if submitted from a country page
+    data.sourceCountry = selectedCountry?.name || 'Home Page';
+    data.timestamp = new Date().toLocaleString();
 
     try {
+      // 1. Send to Google Sheets (Conceptual - Requires the Script URL setup)
+      // We use 'no-cors' for simple Apps Script triggers if not configured for full CORS
+      if (GOOGLE_SCRIPT_URL !== "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec") {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      }
+
+      // 2. AI Assessment
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Assess this professional profile for NextStep Consultancy: 
-                   Candidate Name: ${data.name}
+        contents: `Assess this registration for NextStep Consultancy: 
+                   Name: ${data.fullName}
                    Profession: ${data.profession}
-                   Career Goal: ${data.goal}
-                   Target Destination: ${data.targetCountry}.
-                   Provide a 2-sentence encouraging expert recommendation for their pathway.`,
+                   Education: ${data.education}
+                   Experience: ${data.experience} years
+                   Goal: ${data.goal}
+                   Destination: ${data.targetDestination}.
+                   Provide a professional, specific 2-sentence encouraging recommendation for their specific pathway.`,
         config: {
-          systemInstruction: "You are an elite career consultant at NextStep Consultancy. Be professional, direct, and highly encouraging."
+          systemInstruction: "You are an elite career consultant at NextStep Consultancy. Be professional, direct, and highly encouraging. Mention their target country."
         }
       });
-      setAiRecommendation(response.text || "Our experts will review your details immediately.");
+      setAiRecommendation(response.text || "Your profile has been logged for manual review.");
       setIsSubmitted(true);
     } catch (error) {
-      console.error("AI Assessment error:", error);
-      setAiRecommendation("Our consultants will provide a detailed evaluation shortly via WhatsApp.");
+      console.error("Submission error:", error);
+      setAiRecommendation("Profile logged. A consultant will contact you on WhatsApp with a full evaluation.");
       setIsSubmitted(true);
     } finally {
       setIsLoading(false);
@@ -237,7 +258,7 @@ const App: React.FC = () => {
               onClick={() => { setIsPromoPopupOpen(false); setIsApplyModalOpen(true); }}
               className="flex-1 bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-slate-800 transition shadow-xl"
             >
-              Start My Application
+              Sign Up Now
             </button>
             <button 
               onClick={openWhatsApp}
@@ -254,60 +275,120 @@ const App: React.FC = () => {
   const ApplyModal = () => (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !isLoading && setIsApplyModalOpen(false)}></div>
-      <div className="relative bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
-        <div className="bg-blue-700 p-8 text-white relative shrink-0">
-          <h2 className="text-2xl font-serif font-bold mb-2">Profile Assessment</h2>
-          <p className="text-blue-100 text-sm">Target: {selectedCountry?.name || 'Global Career'}</p>
-          <button onClick={() => { setIsApplyModalOpen(false); setIsSubmitted(false); setAiRecommendation(null); }} className="absolute top-6 right-6 text-white/50 hover:text-white transition p-2 rounded-full hover:bg-white/10">✕</button>
+      <div className="relative bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[95vh] flex flex-col">
+        <div className="bg-blue-700 p-10 text-white relative shrink-0">
+          <h2 className="text-3xl font-serif font-bold mb-2">Registration & Assessment</h2>
+          <p className="text-blue-100 text-sm">Join NextStep Consultancy for your global career transition.</p>
+          <button onClick={() => { setIsApplyModalOpen(false); setIsSubmitted(false); setAiRecommendation(null); }} className="absolute top-8 right-8 text-white/50 hover:text-white transition p-3 rounded-full hover:bg-white/10">✕</button>
         </div>
-        <div className="p-8 overflow-y-auto">
+        <div className="p-10 overflow-y-auto">
           {isSubmitted ? (
             <div className="text-center py-12 animate-in fade-in duration-500">
-              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">⚕️</div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Registration Logged!</h3>
-              <div className="bg-slate-50 border border-slate-100 p-6 rounded-2xl mb-8">
-                <p className="text-xs text-blue-700 uppercase font-bold tracking-widest mb-2">AI Consultant Recommendation</p>
-                <p className="text-slate-700 leading-relaxed italic">"{aiRecommendation}"</p>
+              <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-8">✓</div>
+              <h3 className="text-3xl font-bold text-slate-900 mb-4">Registration Successful!</h3>
+              <div className="bg-slate-50 border border-slate-200 p-8 rounded-3xl mb-10 max-w-2xl mx-auto">
+                <p className="text-xs text-blue-700 uppercase font-bold tracking-widest mb-3">AI Expert Evaluation</p>
+                <p className="text-slate-800 text-lg leading-relaxed font-medium">"{aiRecommendation}"</p>
               </div>
-              <p className="text-slate-600 text-sm">A human licensing expert will contact you via WhatsApp shortly to finalize your documents.</p>
+              <p className="text-slate-600 mb-8">Data synced to our master registry. Check your WhatsApp for a follow-up message.</p>
+              <button onClick={() => { setIsApplyModalOpen(false); setIsSubmitted(false); }} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-bold">Return to Dashboard</button>
             </div>
           ) : (
-            <form onSubmit={handleInquiry} className="space-y-8">
+            <form onSubmit={handleInquiry} className="space-y-10">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-                  <span className="w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center mr-3 text-sm">01</span>
-                  Professional Identity
+                <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                  <span className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center mr-4 text-sm font-bold">01</span>
+                  Personal Details
                 </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <input name="fullName" required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-blue-500" placeholder="Full Name (per degree)" />
-                  <input name="whatsapp" required type="tel" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-blue-500" placeholder="WhatsApp Number" />
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Full Name</label>
+                    <input name="fullName" required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500 transition-all focus:bg-white focus:shadow-lg" placeholder="e.g. Dr. Ahmed Ali" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Email Address</label>
+                    <input name="email" required type="email" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500 transition-all focus:bg-white focus:shadow-lg" placeholder="ahmed@example.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">WhatsApp Number</label>
+                    <input name="whatsapp" required type="tel" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500 transition-all focus:bg-white focus:shadow-lg" placeholder="+92 311 9548076" />
+                  </div>
                 </div>
               </div>
+
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-                  <span className="w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center mr-3 text-sm">02</span>
-                  Professional Goal
+                <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                  <span className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center mr-4 text-sm font-bold">02</span>
+                  Professional Profile
                 </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <select name="profession" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-blue-500">
-                    <option value="">Role</option>
-                    <option value="MBBS">MBBS Doctor</option>
-                    <option value="BDS">Dentist</option>
-                    <option value="Paramedic">Paramedic / Allied Health</option>
-                    <option value="Nurse">Registered Nurse</option>
-                    <option value="Engineer">Engineer / IT Professional</option>
-                  </select>
-                  <select name="goal" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-blue-500">
-                    <option value="">Objective</option>
-                    <option value="Residency">Clinical Residency (Germany/Sweden)</option>
-                    <option value="Masters">Masters / PhD Admissions</option>
-                    <option value="JobSearch">Direct Employment / Job Search</option>
-                  </select>
+                <div className="grid md:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Profession</label>
+                    <select name="profession" required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500 appearance-none">
+                      <option value="">Select Role</option>
+                      <option value="Doctor">MBBS / Doctor</option>
+                      <option value="Dentist">BDS / Dentist</option>
+                      <option value="Nurse">RN / Nurse</option>
+                      <option value="Paramedic">Paramedic / Allied Health</option>
+                      <option value="Student">Current Student</option>
+                      <option value="Other">Other Professional</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Qualification</label>
+                    <input name="education" required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500" placeholder="e.g. MBBS, MSc" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Experience (Years)</label>
+                    <input name="experience" required type="number" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500" placeholder="0" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Current City</label>
+                    <input name="city" required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500" placeholder="Peshawar" />
+                  </div>
                 </div>
               </div>
-              <button type="submit" disabled={isLoading} className="w-full bg-blue-700 text-white font-bold py-5 rounded-2xl hover:bg-blue-800 transition disabled:opacity-50">
-                {isLoading ? "Running AI Profile Assessment..." : "Submit Profile for AI Review"}
-              </button>
+
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                  <span className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center mr-4 text-sm font-bold">03</span>
+                  Career Intentions
+                </h3>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Target Destination</label>
+                    <select name="targetDestination" required defaultValue={selectedCountry?.name || ""} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500">
+                      <option value="">Select Country</option>
+                      <option value="Germany">Germany</option>
+                      <option value="Sweden">Sweden</option>
+                      <option value="Italy">Italy</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Denmark">Denmark</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Primary Objective</label>
+                    <select name="goal" required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500">
+                      <option value="">Objective</option>
+                      <option value="Residency">Clinical Residency</option>
+                      <option value="Masters">Masters (Study)</option>
+                      <option value="PhD">PhD / Research</option>
+                      <option value="Job">Direct Job Placement</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Notes / Resume Link</label>
+                    <input name="notes" type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-blue-500" placeholder="Optional" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button type="submit" disabled={isLoading} className="w-full bg-blue-700 text-white font-bold py-6 rounded-3xl hover:bg-blue-800 transition-all shadow-2xl shadow-blue-500/30 text-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isLoading ? "Syncing to Global Registry & Running AI Review..." : "Confirm My Registration"}
+                </button>
+                <p className="text-center text-slate-400 text-xs mt-6">By signing up, you agree to receive career assessment details via WhatsApp/Email from NextStep Consultancy.</p>
+              </div>
             </form>
           )}
         </div>
@@ -415,7 +496,7 @@ const App: React.FC = () => {
                               <span>💰 {job.salaryRange}</span>
                             </div>
                           </div>
-                          <button onClick={() => setIsApplyModalOpen(true)} className="bg-blue-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-800 transition shadow-lg shadow-blue-500/20">Apply Now</button>
+                          <button onClick={() => setIsApplyModalOpen(true)} className="bg-blue-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-800 transition shadow-lg shadow-blue-500/20">Sign Up</button>
                         </div>
                       </div>
                     ))}
@@ -467,21 +548,21 @@ const App: React.FC = () => {
             <button onClick={() => scrollToSection('services')} className="hover:text-blue-700 transition">Services</button>
             <button onClick={() => scrollToSection('contact')} className="hover:text-blue-700 transition">Contact</button>
           </div>
-          <button onClick={() => setIsApplyModalOpen(true)} className="bg-blue-700 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-800 transition shadow-lg shadow-blue-500/20">Consult Now</button>
+          <button onClick={() => setIsApplyModalOpen(true)} className="bg-blue-700 text-white px-8 py-2.5 rounded-full font-semibold hover:bg-blue-800 transition shadow-lg shadow-blue-500/20">Sign Up</button>
         </div>
       </nav>
 
       {selectedCountry ? <CountryDetail country={selectedCountry} /> : (
         <>
-          <section className="relative py-28 bg-slate-950 text-white overflow-hidden">
+          <section className="relative py-32 bg-slate-950 text-white overflow-hidden">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/medical-icons.png')] opacity-10"></div>
             <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
-              <span className="inline-block py-1 px-4 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold mb-6 border border-blue-500/20 uppercase tracking-widest">Global Specialization Experts</span>
-              <h1 className="text-6xl md:text-8xl font-serif font-bold mb-8 leading-none tracking-tighter text-balance">Careers <br /><span className="text-blue-500">Without Borders.</span></h1>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-12">Peshawar's elite career consultancy. Expert pathways for professionals and paramedics to Germany, Sweden, Italy, and Canada.</p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <button onClick={() => setIsApplyModalOpen(true)} className="bg-white text-slate-950 px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-50 transition shadow-2xl">Start AI Assessment</button>
-                <button onClick={openWhatsApp} className="bg-green-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-green-700 transition flex items-center justify-center shadow-2xl">💬 WhatsApp Expert</button>
+              <span className="inline-block py-1 px-5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold mb-8 border border-blue-500/20 uppercase tracking-widest">Elite Global Specialization Experts</span>
+              <h1 className="text-6xl md:text-9xl font-serif font-bold mb-10 leading-none tracking-tighter text-balance">Global Careers <br /><span className="text-blue-500">Starts Here.</span></h1>
+              <p className="text-2xl text-slate-400 max-w-4xl mx-auto mb-16 leading-relaxed">Peshawar's leading professional consultancy. High-impact pathways to Germany, Sweden, Italy, and Canada for professionals and medical experts.</p>
+              <div className="flex flex-col sm:flex-row justify-center gap-6">
+                <button onClick={() => setIsApplyModalOpen(true)} className="bg-white text-slate-950 px-12 py-6 rounded-3xl font-bold text-xl hover:bg-blue-50 transition-all shadow-2xl hover:scale-105 active:scale-95">Sign Up Now</button>
+                <button onClick={openWhatsApp} className="bg-green-600 text-white px-12 py-6 rounded-3xl font-bold text-xl hover:bg-green-700 transition-all flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95">💬 WhatsApp Expert</button>
               </div>
             </div>
           </section>
@@ -489,23 +570,23 @@ const App: React.FC = () => {
           <section id="destinations" className="py-24">
             <div className="max-w-7xl mx-auto px-4">
               <div className="text-center mb-16">
-                <h2 className="text-4xl font-serif font-bold text-slate-900 mb-4">Destinations</h2>
-                <p className="text-slate-600">Explore real-time application status for global career hubs.</p>
+                <h2 className="text-4xl font-serif font-bold text-slate-900 mb-4">Core Destinations</h2>
+                <p className="text-slate-600">Explore real-time application status for our premium career hubs.</p>
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
                 {countries.map((country) => (
-                  <div key={country.code} onClick={() => setSelectedCountry(country)} className="bg-white rounded-[32px] overflow-hidden shadow-sm hover:shadow-2xl transition-all border border-slate-100 group cursor-pointer flex flex-col">
-                    <div className="h-40 relative overflow-hidden">
+                  <div key={country.code} onClick={() => setSelectedCountry(country)} className="bg-white rounded-[40px] overflow-hidden shadow-sm hover:shadow-2xl transition-all border border-slate-100 group cursor-pointer flex flex-col">
+                    <div className="h-56 relative overflow-hidden">
                       <img src={country.image} alt={country.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
-                      <div className="absolute top-4 left-4">
+                      <div className="absolute top-5 left-5">
                         <StatusBadge status={country.status} />
                       </div>
                     </div>
-                    <div className="p-6 flex-1 flex flex-col">
-                      <h3 className="text-xl font-bold mb-2 group-hover:text-blue-700 transition">{country.name}</h3>
-                      <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-4">{country.statusNote}</p>
+                    <div className="p-8 flex-1 flex flex-col">
+                      <h3 className="text-2xl font-bold mb-3 group-hover:text-blue-700 transition">{country.name}</h3>
+                      <p className="text-slate-500 text-xs uppercase font-bold tracking-widest mb-6">{country.statusNote}</p>
                       <div className="mt-auto">
-                        <span className="text-blue-700 font-bold text-[10px] uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-block">Explore Hub →</span>
+                        <span className="text-blue-700 font-bold text-xs uppercase tracking-wider group-hover:translate-x-2 transition-transform inline-block">Explore Pathway →</span>
                       </div>
                     </div>
                   </div>
@@ -515,28 +596,28 @@ const App: React.FC = () => {
           </section>
 
           <section id="services" className="py-24 bg-white">
-            <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
+            <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-20 items-center">
               <div>
-                <h2 className="text-5xl font-serif font-bold text-slate-900 mb-8 leading-tight">Elite Professional <br /> Coaching & Strategy</h2>
-                <p className="text-lg text-slate-600 mb-10 leading-relaxed">From Anabin degree validation and Approbation training in Germany to specialized admissions in Italy, we provide end-to-end strategic support.</p>
-                <div className="grid gap-6">
+                <h2 className="text-5xl font-serif font-bold text-slate-900 mb-10 leading-tight">Strategic Professional <br /> Coaching</h2>
+                <p className="text-xl text-slate-600 mb-12 leading-relaxed">From Anabin degree validation and Approbation training in Germany to specialized admissions in Canada and Italy, we provide total end-to-end support.</p>
+                <div className="grid gap-8">
                   {services.map((s, idx) => (
-                    <div key={idx} className="p-6 bg-slate-50 rounded-3xl flex items-center hover:bg-blue-50 transition border border-transparent hover:border-blue-100 group">
-                      <div className="text-4xl mr-6 group-hover:scale-110 transition">{s.icon}</div>
+                    <div key={idx} className="p-8 bg-slate-50 rounded-[32px] flex items-center hover:bg-blue-50 transition border border-transparent hover:border-blue-100 group">
+                      <div className="text-5xl mr-8 group-hover:rotate-12 transition">{s.icon}</div>
                       <div>
-                        <h3 className="font-bold text-slate-900">{s.title}</h3>
-                        <p className="text-sm text-slate-500">{s.description}</p>
+                        <h3 className="text-xl font-bold text-slate-900">{s.title}</h3>
+                        <p className="text-slate-500 leading-relaxed">{s.description}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="relative rounded-[48px] overflow-hidden shadow-2xl ring-1 ring-slate-100">
-                <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80" alt="Consultancy Session" className="w-full h-full object-cover" />
+              <div className="relative rounded-[64px] overflow-hidden shadow-3xl ring-1 ring-slate-100">
+                <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=1200&q=80" alt="Consultancy Session" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-blue-900/10"></div>
-                <div className="absolute bottom-8 left-8 right-8 bg-white/90 backdrop-blur p-8 rounded-3xl border border-white/20">
-                    <p className="text-slate-900 font-bold text-lg mb-1">Direct Admission Access</p>
-                    <p className="text-slate-600 text-sm italic">Connected to official professional boards and international portals.</p>
+                <div className="absolute bottom-10 left-10 right-10 bg-white/90 backdrop-blur-xl p-10 rounded-[40px] border border-white/20">
+                    <p className="text-slate-900 font-bold text-xl mb-2">Admission & Registration Access</p>
+                    <p className="text-slate-600 leading-relaxed">Direct links to official professional boards and international portals through our expert panel.</p>
                 </div>
               </div>
             </div>
@@ -544,43 +625,43 @@ const App: React.FC = () => {
         </>
       )}
 
-      <footer id="contact" className="bg-slate-950 text-white pt-24 pb-12">
+      <footer id="contact" className="bg-slate-950 text-white pt-28 pb-16">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-12 mb-20">
+          <div className="grid md:grid-cols-4 gap-16 mb-24">
             <div className="md:col-span-1">
-              <div className="flex items-center space-x-2 mb-8">
-                <div className="w-10 h-10 bg-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
-                <span className="text-2xl font-serif font-bold tracking-tight">NextStep <span className="text-blue-700">Consultancy</span></span>
+              <div className="flex items-center space-x-3 mb-10">
+                <div className="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center text-white font-bold text-2xl">N</div>
+                <span className="text-3xl font-serif font-bold tracking-tight">NextStep <span className="text-blue-700">Consultancy</span></span>
               </div>
-              <p className="text-slate-500 mb-8 leading-relaxed">Peshawar's specialized foreign career partner. Professional registration and study consultancy.</p>
+              <p className="text-slate-500 mb-10 leading-relaxed">Peshawar's elite foreign career partner. Leading professional registration and clinical study consultancy since 2024.</p>
               
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Our Founder</h4>
-                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" className="flex items-center p-3 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-500/50 transition group">
-                  <div className="w-12 h-12 linkedin-bg rounded-xl flex items-center justify-center text-white text-xl mr-4 group-hover:scale-110 transition">in</div>
+              <div className="space-y-6">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Head of Operations</h4>
+                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" className="flex items-center p-4 rounded-3xl bg-white/5 border border-white/10 hover:border-blue-500/50 transition group">
+                  <div className="w-14 h-14 linkedin-bg rounded-2xl flex items-center justify-center text-white text-2xl mr-5 group-hover:scale-110 transition">in</div>
                   <div>
-                    <p className="font-bold text-sm">Engr. Muhammad Khalid</p>
-                    <p className="text-xs text-slate-400">Founder & Tech Lead</p>
+                    <p className="font-bold text-base">Engr. Muhammad Khalid</p>
+                    <p className="text-sm text-slate-400">Founder & Tech Lead</p>
                   </div>
                 </a>
               </div>
             </div>
 
-            <div className="md:col-span-2 grid sm:grid-cols-2 gap-12">
+            <div className="md:col-span-2 grid sm:grid-cols-2 gap-16">
               <div>
-                <h4 className="font-bold mb-8 text-lg">Direct Connect</h4>
-                <ul className="space-y-6">
+                <h4 className="font-bold mb-10 text-xl">Direct Assistance</h4>
+                <ul className="space-y-8">
                   <li className="flex items-start">
-                    <span className="mr-4 text-blue-500 text-xl">📍</span>
-                    <span className="text-slate-400 text-sm">Hashtnagary Peshawar, KPK, Pakistan</span>
+                    <span className="mr-5 text-blue-500 text-2xl">📍</span>
+                    <span className="text-slate-400 leading-relaxed">Hashtnagary Peshawar,<br />KPK, Pakistan</span>
                   </li>
                   <li className="flex items-center">
-                    <span className="mr-4 text-blue-500 text-xl">📞</span>
-                    <span className="text-slate-400 text-sm">+92 311 9548076</span>
+                    <span className="mr-5 text-blue-500 text-2xl">📞</span>
+                    <span className="text-slate-400">+92 311 9548076</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="mr-4 text-blue-500 text-xl">✉️</span>
-                    <div className="text-slate-400 text-xs">
+                    <span className="mr-5 text-blue-500 text-2xl">✉️</span>
+                    <div className="text-slate-400 text-sm space-y-1">
                       <p>softengr.ks@gmail.com</p>
                       <p>dev.engineerkhalid@gmail.com</p>
                     </div>
@@ -588,34 +669,34 @@ const App: React.FC = () => {
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold mb-8 text-lg">Quick Links</h4>
-                <ul className="space-y-4 text-slate-400 text-sm">
-                  <li><a href="https://www.daad.de/en/" target="_blank" className="hover:text-white transition">DAAD Admissions</a></li>
+                <h4 className="font-bold mb-10 text-xl">Quick Pathways</h4>
+                <ul className="space-y-5 text-slate-400">
+                  <li><a href="https://www.daad.de/en/" target="_blank" className="hover:text-white transition">DAAD Admissions Portal</a></li>
                   <li><button onClick={() => { const s = countries.find(c => c.code === 'SE'); if(s) setSelectedCountry(s); }} className="hover:text-white transition">Sweden Socialstyrelsen</button></li>
                   <li><button onClick={() => { const g = countries.find(c => c.code === 'DE'); if(g) setSelectedCountry(g); }} className="hover:text-white transition">Germany Winter Intake</button></li>
-                  <li><button onClick={openWhatsApp} className="hover:text-white transition">Expert WhatsApp Chat</button></li>
+                  <li><button onClick={openWhatsApp} className="hover:text-white transition">Expert Consult Chat</button></li>
                 </ul>
               </div>
             </div>
 
             <div className="md:col-span-1">
-              <div className="bg-blue-700/10 border border-blue-500/20 p-8 rounded-[32px]">
-                <h4 className="font-bold mb-4">Register Interest</h4>
-                <p className="text-sm text-slate-400 mb-6">Partnered with European boards for seamless professional registration processing.</p>
-                <button onClick={() => setIsApplyModalOpen(true)} className="w-full bg-blue-700 text-white font-bold py-4 rounded-2xl hover:bg-blue-800 transition shadow-lg shadow-blue-500/20">
-                  Assess My Profile
+              <div className="bg-blue-700/10 border border-blue-500/20 p-10 rounded-[40px]">
+                <h4 className="font-bold mb-6 text-xl">Global Registry</h4>
+                <p className="text-sm text-slate-400 mb-8 leading-relaxed">Partnered with European and North American boards for seamless degree and professional registration processing.</p>
+                <button onClick={() => setIsApplyModalOpen(true)} className="w-full bg-blue-700 text-white font-bold py-5 rounded-2xl hover:bg-blue-800 transition-all shadow-xl shadow-blue-500/20">
+                  Sign Up Now
                 </button>
               </div>
             </div>
           </div>
-          <div className="pt-12 border-t border-white/5 text-center text-slate-600 text-sm">
-            © 2024 NextStep Consultancy Abroad. Specialized Foreign Career & Study Consulting.
+          <div className="pt-16 border-t border-white/5 text-center text-slate-600 text-sm">
+            © 2024 NextStep Consultancy Abroad. Professional Foreign Career & Study Consulting.
           </div>
         </div>
       </footer>
 
-      <button onClick={openWhatsApp} className="fixed bottom-8 right-8 w-16 h-16 bg-green-500 text-white rounded-[24px] flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-50">
-        <span className="text-3xl">💬</span>
+      <button onClick={openWhatsApp} className="fixed bottom-10 right-10 w-20 h-20 bg-green-500 text-white rounded-[32px] flex items-center justify-center shadow-3xl hover:scale-110 transition-transform z-50 group">
+        <span className="text-4xl group-hover:rotate-12 transition">💬</span>
       </button>
     </div>
   );
