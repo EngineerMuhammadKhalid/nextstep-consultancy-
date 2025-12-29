@@ -10,6 +10,16 @@ import { GoogleGenAI } from "@google/genai";
 // 5. Replace the placeholder URL below with your Deployment URL.
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec"; 
 
+interface GroundingSource {
+  uri: string;
+  title: string;
+}
+
+interface CachedSearchData {
+  text: string;
+  sources: GroundingSource[];
+}
+
 interface EnhancedCountry extends Country {
   status: 'Open' | 'On Hold' | 'Study Only' | 'Winter Intake Open';
   statusNote: string;
@@ -128,8 +138,12 @@ const App: React.FC = () => {
   const [isPromoPopupOpen, setIsPromoPopupOpen] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [specialtyFilter, setSpecialtyFilter] = useState('All Specialties');
   const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
+  
+  // Cache for Google Search results
+  const [searchCache, setSearchCache] = useState<Record<string, CachedSearchData>>({});
 
   const linkedInUrl = "https://www.linkedin.com/in/engr-muhammad-khalid-675a61266/";
 
@@ -140,7 +154,50 @@ const App: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (selectedCountry) {
+      fetchCountryInsights(selectedCountry);
+    }
   }, [selectedCountry]);
+
+  const fetchCountryInsights = async (country: EnhancedCountry) => {
+    if (searchCache[country.code]) return;
+
+    setIsSearching(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const prompt = `Provide a detailed overview of the current healthcare system nuances and economic status for foreign medical professionals looking to relocate to ${country.name} in 2025. Focus on practical insights for residency and licensing.`;
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
+      });
+
+      const text = response.text || "Information currently being updated by our analysts.";
+      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      
+      const sources: GroundingSource[] = chunks
+        .filter((c: any) => c.web)
+        .map((c: any) => ({
+          uri: c.web.uri,
+          title: c.web.title || c.web.uri
+        }));
+
+      // Deduplicate sources
+      const uniqueSources = sources.filter((v, i, a) => a.findIndex(t => t.uri === v.uri) === i);
+
+      setSearchCache(prev => ({
+        ...prev,
+        [country.code]: { text, sources: uniqueSources }
+      }));
+    } catch (error) {
+      console.error("Search grounding error:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const scrollToSection = (id: string) => {
     if (selectedCountry) setSelectedCountry(null);
@@ -162,13 +219,10 @@ const App: React.FC = () => {
     const data: Record<string, any> = {};
     formData.forEach((value, key) => { data[key] = value; });
     
-    // Add context if submitted from a country page
     data.sourceCountry = selectedCountry?.name || 'Home Page';
     data.timestamp = new Date().toLocaleString();
 
     try {
-      // 1. Send to Google Sheets (Conceptual - Requires the Script URL setup)
-      // We use 'no-cors' for simple Apps Script triggers if not configured for full CORS
       if (GOOGLE_SCRIPT_URL !== "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec") {
         await fetch(GOOGLE_SCRIPT_URL, {
           method: 'POST',
@@ -178,7 +232,6 @@ const App: React.FC = () => {
         });
       }
 
-      // 2. AI Assessment
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -406,6 +459,8 @@ const App: React.FC = () => {
       specialtyFilter === 'All Specialties' || job.specialty === specialtyFilter
     );
 
+    const searchData = searchCache[country.code];
+
     return (
       <div className="animate-in fade-in duration-500 pb-24">
         <div className="relative h-[350px] md:h-[450px] w-full">
@@ -447,6 +502,58 @@ const App: React.FC = () => {
                       <span className="mr-3 text-blue-600">✔</span> {benefit}
                     </div>
                   ))}
+                </div>
+              </section>
+
+              {/* Real-time Insights powered by Google Search */}
+              <section className="bg-slate-900 text-white p-8 md:p-12 rounded-[40px] shadow-2xl overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <h2 className="text-3xl font-serif font-bold mb-2">Regional Insights 2025</h2>
+                      <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">Real-time Grounded AI Analysis</p>
+                    </div>
+                    <div className="hidden sm:block">
+                      <div className="bg-white/10 px-4 py-2 rounded-full border border-white/10 text-[10px] font-bold">POWERED BY GOOGLE SEARCH</div>
+                    </div>
+                  </div>
+
+                  {isSearching ? (
+                    <div className="space-y-4 animate-pulse">
+                      <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                      <div className="h-4 bg-white/10 rounded w-full"></div>
+                      <div className="h-4 bg-white/10 rounded w-5/6"></div>
+                    </div>
+                  ) : searchData ? (
+                    <div className="space-y-8">
+                      <p className="text-slate-300 leading-relaxed text-lg whitespace-pre-line">
+                        {searchData.text}
+                      </p>
+                      
+                      {searchData.sources.length > 0 && (
+                        <div className="pt-8 border-t border-white/10">
+                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Grounded Sources & References</h4>
+                          <div className="flex flex-wrap gap-3">
+                            {searchData.sources.map((source, idx) => (
+                              <a 
+                                key={idx} 
+                                href={source.uri} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-xs text-blue-400 hover:bg-white/10 transition flex items-center gap-2"
+                              >
+                                <span className="truncate max-w-[150px]">{source.title}</span>
+                                <span className="text-[10px]">↗</span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 italic">Failed to load real-time insights. Please refresh or try again later.</p>
+                  )}
                 </div>
               </section>
 
@@ -558,7 +665,7 @@ const App: React.FC = () => {
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/medical-icons.png')] opacity-10"></div>
             <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
               <span className="inline-block py-1 px-5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold mb-8 border border-blue-500/20 uppercase tracking-widest">Elite Global Specialization Experts</span>
-              <h1 className="text-6xl md:text-9xl font-serif font-bold mb-10 leading-none tracking-tighter text-balance">Global Careers <br /><span className="text-blue-500">Starts Here.</span></h1>
+              <h1 className="text-6xl md:text-9xl font-serif font-bold mb-10 leading-none tracking-tighter text-balance text-white">Global Careers <br /><span className="text-blue-500">Starts Here.</span></h1>
               <p className="text-2xl text-slate-400 max-w-4xl mx-auto mb-16 leading-relaxed">Peshawar's leading professional consultancy. High-impact pathways to Germany, Sweden, Italy, and Canada for professionals and medical experts.</p>
               <div className="flex flex-col sm:flex-row justify-center gap-6">
                 <button onClick={() => setIsApplyModalOpen(true)} className="bg-white text-slate-950 px-12 py-6 rounded-3xl font-bold text-xl hover:bg-blue-50 transition-all shadow-2xl hover:scale-105 active:scale-95">Sign Up Now</button>
