@@ -22,7 +22,6 @@ interface EnhancedCountry extends Country {
   officialOrgName?: string;
 }
 
-// Sub-components moved outside to prevent re-mounting/jumping issues
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     'Open': 'bg-green-100 text-green-700 border-green-200',
@@ -94,7 +93,6 @@ const AgreementView: React.FC<{
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
 
-    // Header
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(22);
     doc.text('NEXTSTEP CONSULTANCY', pageWidth / 2, 25, { align: 'center' });
@@ -107,70 +105,54 @@ const AgreementView: React.FC<{
     doc.text(`Date of Issue: ${date}`, margin, 45);
     doc.text('Location: Peshawar, KPK, Pakistan', margin, 50);
 
-    // Line separator
     doc.setLineWidth(0.5);
     doc.line(margin, 55, pageWidth - margin, 55);
 
     let yPos = 65;
 
-    // Parties Section
     doc.setFont('helvetica', 'bold');
     doc.text('1. PARTIES', margin, yPos);
     yPos += 7;
     doc.setFont('helvetica', 'normal');
-    const partiesText = `This agreement is between Service Provider Mr. Muhammad Khalid and the Applicant ${signature || '[Applicant Name]'}.`;
+    const partiesText = `This agreement is between NextStep Consultancy (Service Provider: Mr. Muhammad Khalid) and the Applicant: ${signature || '[Full Legal Name]'}.`;
     const partiesLines = doc.splitTextToSize(partiesText, contentWidth);
     doc.text(partiesLines, margin, yPos);
     yPos += (partiesLines.length * 6) + 5;
 
-    // Purpose
     doc.setFont('helvetica', 'bold');
     doc.text('2. PURPOSE & SCOPE', margin, yPos);
     yPos += 7;
     doc.setFont('helvetica', 'normal');
-    const purposeText = "The Applicant appoints the Service Provider to provide professional consultancy services for visa guidance related to medical job, residency, or study abroad. The Service Provider agrees to provide consultancy only, subject to the terms herein.";
+    const purposeText = "The Applicant appoints the Service Provider to provide professional consultancy services for foreign visa guidance, PG residency applications, and clinical licensing pathways. The Service Provider shall act as an advisor and documentation expert.";
     const purposeLines = doc.splitTextToSize(purposeText, contentWidth);
     doc.text(purposeLines, margin, yPos);
     yPos += (purposeLines.length * 6) + 5;
 
-    // Fees
     doc.setFont('helvetica', 'bold');
     doc.text('3. CONSULTANCY FEES', margin, yPos);
     yPos += 7;
     doc.setFont('helvetica', 'normal');
-    const feesText = "The total consultancy fee shall be mutually agreed. 30% of the consultancy fee shall be paid as advance at the start of the application. All consultancy payments are non-refundable under all circumstances.";
+    const feesText = "The consultancy fee is agreed upon registration. A 30% non-refundable advance is required to initiate the file. All third-party expenses (embassy fees, translation, courier) are responsibility of the applicant.";
     const feesLines = doc.splitTextToSize(feesText, contentWidth);
     doc.text(feesLines, margin, yPos);
-    yPos += (feesLines.length * 6) + 5;
+    yPos += (feesLines.length * 6) + 10;
 
-    // Liability
-    doc.setFont('helvetica', 'bold');
-    doc.text('4. LIMITATION OF LIABILITY', margin, yPos);
-    yPos += 7;
-    doc.setFont('helvetica', 'normal');
-    const liabilityText = "The Service Provider shall not be liable for rejection, delay, or refusal caused by embassy policy, government changes, security checks, or incomplete documentation. The decision of the Embassy/Government remains final.";
-    const liabilityLines = doc.splitTextToSize(liabilityText, contentWidth);
-    doc.text(liabilityLines, margin, yPos);
-    yPos += (liabilityLines.length * 6) + 15;
-
-    // Signatures
     doc.setLineWidth(0.2);
     doc.line(margin, yPos, margin + 70, yPos);
     doc.line(pageWidth - margin - 70, yPos, pageWidth - margin, yPos);
     
     yPos += 5;
     doc.setFont('helvetica', 'bold');
-    doc.text('Service Provider', margin, yPos);
+    doc.text('NextStep Consultancy', margin, yPos);
     doc.text('Applicant Signature', pageWidth - margin - 70, yPos);
     
     yPos += 5;
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
-    doc.text('Mr. Muhammad Khalid', margin, yPos);
-    doc.text(signature || 'Digital Signature', pageWidth - margin - 70, yPos);
+    doc.text('M. Khalid', margin, yPos);
+    doc.text(signature || '[Signed Digitally]', pageWidth - margin - 70, yPos);
 
-    // Save
-    const fileName = `NextStep_Agreement_${signature.replace(/\s+/g, '_') || 'Applicant'}.pdf`;
+    const fileName = `NextStep_Agreement_${signature.replace(/\s+/g, '_') || 'Draft'}.pdf`;
     doc.save(fileName);
   };
 
@@ -187,32 +169,35 @@ const AgreementView: React.FC<{
         <div className="flex-1 overflow-y-auto p-12 bg-white">
           <div className="max-w-3xl mx-auto space-y-10 text-slate-800 leading-relaxed font-serif text-justify">
             <div className="text-center space-y-4">
-              <h1 className="text-3xl font-bold underline">ELECTRONIC CONSULTANCY AGREEMENT</h1>
+              <h1 className="text-3xl font-bold underline uppercase">Electronic Consultancy Agreement</h1>
               <p className="font-sans text-sm font-bold text-slate-600">(Medical Job / Residency / Study Abroad)</p>
-              <p className="font-sans text-sm">This Electronic Consultancy Agreement (“Agreement”) is entered into electronically on <span className="underline font-bold">{new Date().toLocaleDateString()}</span></p>
+              <p className="font-sans text-sm">Effective Date: <span className="underline font-bold">{new Date().toLocaleDateString()}</span></p>
             </div>
             <div className="space-y-6">
-              <h3 className="font-bold text-xl uppercase border-b pb-2">Parties</h3>
-              <p><strong>Service Provider:</strong> Mr. Muhammad Khalid, Overseas Medical Job / Residency / Study Consultancy Provider (hereinafter referred to as the “Service Provider”)</p>
+              <h3 className="font-bold text-xl uppercase border-b pb-2">1. Parties</h3>
+              <p><strong>Service Provider:</strong> NextStep Consultancy / Mr. Muhammad Khalid, Overseas Medical Job Provider.</p>
               <p><strong>AND</strong></p>
-              <p><strong>Applicant:</strong> <span className="underline font-bold">{signature || '____________________'}</span> (hereinafter referred to as the “Applicant”)</p>
+              <p><strong>Applicant:</strong> <span className="underline font-bold text-blue-700">{signature || '____________________'}</span></p>
             </div>
             <div className="space-y-8 font-sans text-sm leading-relaxed">
-              <section><h4 className="font-bold uppercase mb-2">1. PURPOSE</h4><p>The Applicant appoints the Service Provider to provide professional consultancy services for visa guidance related to medical job, residency, or study abroad. The Service Provider agrees to provide consultancy only, subject to the terms herein.</p></section>
-              <section><h4 className="font-bold uppercase mb-2">2. NATURE OF SERVICES</h4><p>The Service Provider shall provide guidance, procedural assistance, and consultancy for visa and assessment processes. The Service Provider does not guarantee visa approval, job placement, residency confirmation, or admission.</p></section>
-              <section><h4 className="font-bold uppercase mb-2">3. CONSULTANCY FEES & PAYMENT TERMS</h4><p>The total consultancy fee shall be mutually agreed. 30% advance. All consultancy payments are non-refundable under all circumstances.</p></section>
-              <section><h4 className="font-bold uppercase mb-2">7. VISA REJECTION & LIMITATION OF LIABILITY</h4><p>The Service Provider shall not be liable for rejection caused by embassy policy, government changes, or background checks.</p></section>
+              <section><h4 className="font-bold uppercase mb-2">2. Purpose</h4><p>The Applicant appoints the Service Provider for professional guidance regarding foreign medical registration and study pathways.</p></section>
+              <section><h4 className="font-bold uppercase mb-2">3. Fees</h4><p>Consultancy fees are strictly non-refundable once the case processing has initiated. 30% advance required.</p></section>
+              <section><h4 className="font-bold uppercase mb-2">4. Digital Signature</h4><p>By typing your name below and clicking 'Accept', you acknowledge that this acts as a legally binding electronic signature.</p></section>
             </div>
             <div className="grid grid-cols-2 gap-12 pt-12 border-t font-sans">
               <div className="space-y-4">
                 <p className="font-bold text-xs uppercase tracking-widest text-slate-500">Service Provider</p>
                 <div className="h-16 flex items-end border-b-2 border-slate-900 pb-2 italic text-2xl font-serif">M. Khalid</div>
-                <p className="text-sm font-bold">Mr. Muhammad Khalid</p>
               </div>
               <div className="space-y-4">
                 <p className="font-bold text-xs uppercase tracking-widest text-slate-500">Applicant Signature</p>
-                <input value={signature} onChange={(e) => onSignatureChange(e.target.value)} placeholder="Type Full Legal Name" className="h-16 w-full border-b-2 border-slate-900 text-2xl font-serif italic outline-none focus:border-blue-500 bg-transparent" />
-                <p className="text-xs text-slate-400">Date: {new Date().toLocaleDateString()}</p>
+                <input 
+                  autoFocus
+                  value={signature} 
+                  onChange={(e) => onSignatureChange(e.target.value)} 
+                  placeholder="Type Your Full Name" 
+                  className="h-16 w-full border-b-2 border-slate-900 text-2xl font-serif italic outline-none focus:border-blue-500 bg-transparent" 
+                />
               </div>
             </div>
           </div>
@@ -220,13 +205,19 @@ const AgreementView: React.FC<{
         <div className="p-8 bg-slate-50 border-t border-slate-200 shrink-0 flex justify-between items-center">
           <button 
             onClick={handleDownloadPDF}
-            className="px-8 py-3 rounded-xl font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 transition flex items-center gap-2"
+            className="px-8 py-3 rounded-xl font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition flex items-center gap-2 shadow-sm"
           >
             <span>📄</span> Download as PDF
           </button>
           <div className="space-x-4">
             <button onClick={onClose} className="px-8 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition">Cancel</button>
-            <button disabled={!signature || signature.length < 3} onClick={onSign} className="px-12 py-3 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 shadow-xl shadow-blue-500/20">Sign & Accept Agreement</button>
+            <button 
+              disabled={!signature || signature.length < 3} 
+              onClick={onSign} 
+              className="px-12 py-3 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 transition disabled:opacity-50 shadow-xl shadow-blue-500/20"
+            >
+              Sign & Accept Agreement
+            </button>
           </div>
         </div>
       </div>
@@ -374,8 +365,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (selectedCountry) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       fetchCountryInsights(selectedCountry);
     }
   }, [selectedCountry]);
