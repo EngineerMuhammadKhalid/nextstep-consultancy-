@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Country, Service, ChatMessage, Job } from './types';
+import { GoogleGenAI } from "@google/genai";
 
 // Extended type for internal use to track statuses and specific organizational links
 interface EnhancedCountry extends Country {
@@ -121,11 +122,11 @@ const App: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [specialtyFilter, setSpecialtyFilter] = useState('All Specialties');
+  const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
 
   const linkedInUrl = "https://www.linkedin.com/in/engr-muhammad-khalid-675a61266/";
 
   useEffect(() => {
-    // Show promo popup on initial load
     const timer = setTimeout(() => setIsPromoPopupOpen(true), 1500);
     return () => clearTimeout(timer);
   }, []);
@@ -144,6 +145,43 @@ const App: React.FC = () => {
 
   const openWhatsApp = () => {
     window.open('https://wa.me/923119548076', '_blank');
+  };
+
+  const handleInquiry = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get('fullName'),
+      profession: formData.get('profession'),
+      goal: formData.get('goal'),
+      targetCountry: selectedCountry?.name || 'Any Global Hub'
+    };
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Assess this professional profile for NextStep Consultancy: 
+                   Candidate Name: ${data.name}
+                   Profession: ${data.profession}
+                   Career Goal: ${data.goal}
+                   Target Destination: ${data.targetCountry}.
+                   Provide a 2-sentence encouraging expert recommendation for their pathway.`,
+        config: {
+          systemInstruction: "You are an elite career consultant at NextStep Consultancy. Be professional, direct, and highly encouraging."
+        }
+      });
+      setAiRecommendation(response.text || "Our experts will review your details immediately.");
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("AI Assessment error:", error);
+      setAiRecommendation("Our consultants will provide a detailed evaluation shortly via WhatsApp.");
+      setIsSubmitted(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const StatusBadge = ({ status }: { status: string }) => {
@@ -220,17 +258,21 @@ const App: React.FC = () => {
         <div className="bg-blue-700 p-8 text-white relative shrink-0">
           <h2 className="text-2xl font-serif font-bold mb-2">Profile Assessment</h2>
           <p className="text-blue-100 text-sm">Target: {selectedCountry?.name || 'Global Career'}</p>
-          <button onClick={() => setIsApplyModalOpen(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition p-2 rounded-full hover:bg-white/10">✕</button>
+          <button onClick={() => { setIsApplyModalOpen(false); setIsSubmitted(false); setAiRecommendation(null); }} className="absolute top-6 right-6 text-white/50 hover:text-white transition p-2 rounded-full hover:bg-white/10">✕</button>
         </div>
         <div className="p-8 overflow-y-auto">
           {isSubmitted ? (
             <div className="text-center py-12 animate-in fade-in duration-500">
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">⚕️</div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">Registration Logged!</h3>
-              <p className="text-slate-600">A licensing expert will contact you via WhatsApp to discuss your specific pathway.</p>
+              <div className="bg-slate-50 border border-slate-100 p-6 rounded-2xl mb-8">
+                <p className="text-xs text-blue-700 uppercase font-bold tracking-widest mb-2">AI Consultant Recommendation</p>
+                <p className="text-slate-700 leading-relaxed italic">"{aiRecommendation}"</p>
+              </div>
+              <p className="text-slate-600 text-sm">A human licensing expert will contact you via WhatsApp shortly to finalize your documents.</p>
             </div>
           ) : (
-            <form onSubmit={async (e) => { e.preventDefault(); setIsLoading(true); await new Promise(r => setTimeout(r, 1500)); setIsLoading(false); setIsSubmitted(true); setTimeout(() => { setIsApplyModalOpen(false); setIsSubmitted(false); }, 3000); }} className="space-y-8">
+            <form onSubmit={handleInquiry} className="space-y-8">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
                   <span className="w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center mr-3 text-sm">01</span>
@@ -251,18 +293,20 @@ const App: React.FC = () => {
                     <option value="">Role</option>
                     <option value="MBBS">MBBS Doctor</option>
                     <option value="BDS">Dentist</option>
-                    <option value="Paramedic">Paramedic / Paramedical</option>
+                    <option value="Paramedic">Paramedic / Allied Health</option>
                     <option value="Nurse">Registered Nurse</option>
+                    <option value="Engineer">Engineer / IT Professional</option>
                   </select>
                   <select name="goal" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-blue-500">
                     <option value="">Objective</option>
                     <option value="Residency">Clinical Residency (Germany/Sweden)</option>
                     <option value="Masters">Masters / PhD Admissions</option>
+                    <option value="JobSearch">Direct Employment / Job Search</option>
                   </select>
                 </div>
               </div>
-              <button type="submit" disabled={isLoading} className="w-full bg-blue-700 text-white font-bold py-5 rounded-2xl hover:bg-blue-800 transition">
-                {isLoading ? "Validating..." : "Submit Profile for Review"}
+              <button type="submit" disabled={isLoading} className="w-full bg-blue-700 text-white font-bold py-5 rounded-2xl hover:bg-blue-800 transition disabled:opacity-50">
+                {isLoading ? "Running AI Profile Assessment..." : "Submit Profile for AI Review"}
               </button>
             </form>
           )}
@@ -309,17 +353,8 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 )}
-                {country.status === 'Study Only' && (
-                  <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-2xl mb-8 flex items-center">
-                    <span className="text-2xl mr-4">🎓</span>
-                    <div>
-                      <p className="font-bold text-indigo-900">Study Only Consultancy</p>
-                      <p className="text-xs text-indigo-700">We exclusively assist with Admissions & Educational Consulting for {country.name}.</p>
-                    </div>
-                  </div>
-                )}
                 <h2 className="text-2xl font-serif font-bold text-slate-900 mb-6 flex items-center">
-                  <span className="mr-3">⚕️</span> Clinical Licensing & Status
+                  <span className="mr-3">⚕️</span> Professional Pathway & Status
                 </h2>
                 <div className="p-5 bg-blue-50 border-l-4 border-blue-600 rounded-r-xl mb-8">
                   <p className="text-blue-900 font-bold mb-1">Status Overview:</p>
@@ -391,17 +426,17 @@ const App: React.FC = () => {
             
             <div className="space-y-8">
               <div className="bg-slate-950 rounded-3xl p-8 text-white">
-                <h3 className="text-xl font-bold mb-6">Medical Financials</h3>
+                <h3 className="text-xl font-bold mb-6">Relocation Financials</h3>
                 <div className="space-y-6">
                   <div><p className="text-slate-400 text-xs mb-1 uppercase tracking-widest font-bold">Accommodation</p><p className="text-xl font-semibold">{country.livingCosts.rent}</p></div>
-                  <div><p className="text-slate-400 text-xs mb-1 uppercase tracking-widest font-bold">Clinical Expenses</p><p className="text-xl font-semibold">{country.livingCosts.general}</p></div>
+                  <div><p className="text-slate-400 text-xs mb-1 uppercase tracking-widest font-bold">General Expenses</p><p className="text-xl font-semibold">{country.livingCosts.general}</p></div>
                   <div className="pt-6 border-t border-white/10"><p className="text-blue-400 text-xs mb-1 uppercase tracking-widest font-bold">Est. Monthly Total</p><p className="text-2xl font-bold">{country.livingCosts.total}</p></div>
                 </div>
               </div>
               <div className="bg-blue-700 rounded-3xl p-8 text-white relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-125 transition duration-500"></div>
                 <h3 className="text-xl font-bold mb-4">Study Admissions</h3>
-                <p className="text-sm text-blue-100 mb-6">Access top medical faculties and PhD scholarships.</p>
+                <p className="text-sm text-blue-100 mb-6">Access top university faculties and international scholarships.</p>
                 <ul className="text-sm space-y-3 mb-8">
                   {country.universityRankings.map((u, i) => (
                     <li key={i} className="flex items-center"><span className="mr-2 text-blue-300">🎓</span> {u}</li>
@@ -442,10 +477,10 @@ const App: React.FC = () => {
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/medical-icons.png')] opacity-10"></div>
             <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
               <span className="inline-block py-1 px-4 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold mb-6 border border-blue-500/20 uppercase tracking-widest">Global Specialization Experts</span>
-              <h1 className="text-6xl md:text-8xl font-serif font-bold mb-8 leading-none tracking-tighter">Careers <br /><span className="text-blue-500">Without Borders.</span></h1>
+              <h1 className="text-6xl md:text-8xl font-serif font-bold mb-8 leading-none tracking-tighter text-balance">Careers <br /><span className="text-blue-500">Without Borders.</span></h1>
               <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-12">Peshawar's elite career consultancy. Expert pathways for professionals and paramedics to Germany, Sweden, Italy, and Canada.</p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <button onClick={() => setIsApplyModalOpen(true)} className="bg-white text-slate-950 px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-50 transition shadow-2xl">Start Your Assessment</button>
+                <button onClick={() => setIsApplyModalOpen(true)} className="bg-white text-slate-950 px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-50 transition shadow-2xl">Start AI Assessment</button>
                 <button onClick={openWhatsApp} className="bg-green-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-green-700 transition flex items-center justify-center shadow-2xl">💬 WhatsApp Expert</button>
               </div>
             </div>
@@ -483,7 +518,7 @@ const App: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
               <div>
                 <h2 className="text-5xl font-serif font-bold text-slate-900 mb-8 leading-tight">Elite Professional <br /> Coaching & Strategy</h2>
-                <p className="text-lg text-slate-600 mb-10 leading-relaxed">From Anabin degree validation and Approbation training in Germany to paramedic admissions in Italy, we provide end-to-end strategic support.</p>
+                <p className="text-lg text-slate-600 mb-10 leading-relaxed">From Anabin degree validation and Approbation training in Germany to specialized admissions in Italy, we provide end-to-end strategic support.</p>
                 <div className="grid gap-6">
                   {services.map((s, idx) => (
                     <div key={idx} className="p-6 bg-slate-50 rounded-3xl flex items-center hover:bg-blue-50 transition border border-transparent hover:border-blue-100 group">
@@ -497,11 +532,11 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="relative rounded-[48px] overflow-hidden shadow-2xl ring-1 ring-slate-100">
-                <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80" alt="Clinical Consult" className="w-full h-full object-cover" />
+                <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80" alt="Consultancy Session" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-blue-900/10"></div>
                 <div className="absolute bottom-8 left-8 right-8 bg-white/90 backdrop-blur p-8 rounded-3xl border border-white/20">
                     <p className="text-slate-900 font-bold text-lg mb-1">Direct Admission Access</p>
-                    <p className="text-slate-600 text-sm italic">Connected to official professional boards and scholarship portals.</p>
+                    <p className="text-slate-600 text-sm italic">Connected to official professional boards and international portals.</p>
                 </div>
               </div>
             </div>
@@ -537,15 +572,15 @@ const App: React.FC = () => {
                 <ul className="space-y-6">
                   <li className="flex items-start">
                     <span className="mr-4 text-blue-500 text-xl">📍</span>
-                    <span className="text-slate-400">Hashtnagary Peshawar, KPK, Pakistan</span>
+                    <span className="text-slate-400 text-sm">Hashtnagary Peshawar, KPK, Pakistan</span>
                   </li>
                   <li className="flex items-center">
                     <span className="mr-4 text-blue-500 text-xl">📞</span>
-                    <span className="text-slate-400">+92 311 9548076</span>
+                    <span className="text-slate-400 text-sm">+92 311 9548076</span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-4 text-blue-500 text-xl">✉️</span>
-                    <div className="text-slate-400 text-sm">
+                    <div className="text-slate-400 text-xs">
                       <p>softengr.ks@gmail.com</p>
                       <p>dev.engineerkhalid@gmail.com</p>
                     </div>
@@ -554,7 +589,7 @@ const App: React.FC = () => {
               </div>
               <div>
                 <h4 className="font-bold mb-8 text-lg">Quick Links</h4>
-                <ul className="space-y-4 text-slate-400">
+                <ul className="space-y-4 text-slate-400 text-sm">
                   <li><a href="https://www.daad.de/en/" target="_blank" className="hover:text-white transition">DAAD Admissions</a></li>
                   <li><button onClick={() => { const s = countries.find(c => c.code === 'SE'); if(s) setSelectedCountry(s); }} className="hover:text-white transition">Sweden Socialstyrelsen</button></li>
                   <li><button onClick={() => { const g = countries.find(c => c.code === 'DE'); if(g) setSelectedCountry(g); }} className="hover:text-white transition">Germany Winter Intake</button></li>
@@ -566,7 +601,7 @@ const App: React.FC = () => {
             <div className="md:col-span-1">
               <div className="bg-blue-700/10 border border-blue-500/20 p-8 rounded-[32px]">
                 <h4 className="font-bold mb-4">Register Interest</h4>
-                <p className="text-sm text-slate-400 mb-6">Partnered with European boards for seamless registration processing.</p>
+                <p className="text-sm text-slate-400 mb-6">Partnered with European boards for seamless professional registration processing.</p>
                 <button onClick={() => setIsApplyModalOpen(true)} className="w-full bg-blue-700 text-white font-bold py-4 rounded-2xl hover:bg-blue-800 transition shadow-lg shadow-blue-500/20">
                   Assess My Profile
                 </button>
