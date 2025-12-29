@@ -1,6 +1,6 @@
 {
-  "name": "NextStep Medical Abroad",
-  "description": "Elite medical consultancy specializing in PG residency, clinical licensing (Approbation), and admissions for IMGs in Germany, Canada, Denmark, and Europe. Integrated with DAAD and Expertio resources.",
+  "name": "NextStep Consultancy Abroad",
+  "description": "Elite consultancy specializing in foreign jobs and study, providing expert guidance for PG residency, clinical licensing, and admissions in Germany, Canada, Sweden, and Italy.",
   "requestFramePermissions": [
     "microphone"
   ]

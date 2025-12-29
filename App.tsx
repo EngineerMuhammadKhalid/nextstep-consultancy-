@@ -20,7 +20,7 @@ const countries: EnhancedCountry[] = [
     image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80', 
     description: 'The primary destination for International Medical Graduates (IMGs) seeking Facharzt (Specialization).', 
     benefits: ['Paid Residency training', 'No Tuition for MD/PhDs', 'Structured Facharzt Pathway'],
-    jobInsights: 'WINTER INTAKE 2024/25 IS FULLY OPEN. Specialized support for Approbation, FSP, and KP exams.',
+    jobInsights: 'WINTER INTAKE 2025/26 IS FULLY OPEN. Specialized support for Approbation, FSP, and KP exams.',
     universityRankings: ['Heidelberg University', 'Charité Berlin', 'LMU Munich'],
     livingCosts: {
       rent: '€600 - €950',
@@ -167,7 +167,7 @@ const App: React.FC = () => {
         <div className="bg-gradient-to-br from-red-600 to-blue-800 p-8 text-white relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16"></div>
           <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4 inline-block">Urgent Announcement</span>
-          <h2 className="text-3xl font-serif font-bold leading-tight">Winter Intake & <br />Exclusive Offers 2024</h2>
+          <h2 className="text-3xl font-serif font-bold leading-tight">Winter Intake & <br />Exclusive Offers 2026</h2>
           <button onClick={() => setIsPromoPopupOpen(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition">✕</button>
         </div>
         <div className="p-8 space-y-6">
@@ -176,20 +176,20 @@ const App: React.FC = () => {
               <span className="text-2xl mr-4">🇩🇪</span>
               <div>
                 <p className="font-bold text-slate-900">Germany Winter Intake</p>
-                <p className="text-sm text-slate-600">Open for All Medical Fields. Apply now for Jan 2025.</p>
+                <p className="text-sm text-slate-600">Open for All Medical Fields. Apply now for Jan 2026.</p>
               </div>
             </div>
             <div className="flex items-start p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <span className="text-2xl mr-4">🇮🇹</span>
               <div>
                 <p className="font-bold text-slate-900">Italy Winter Intake</p>
-                <p className="text-sm text-slate-600">Open for Doctors & Paramedic Masters.</p>
+                <p className="text-sm text-slate-600">Open for All Medical Fields (Masters).</p>
               </div>
             </div>
             <div className="flex items-start p-4 bg-blue-50 rounded-2xl border border-blue-100">
               <span className="text-2xl mr-4">🇸🇪</span>
               <div>
-                <p className="font-bold text-blue-800">Sweden Special Offer</p>
+                <p className="font-bold text-blue-800">Sweden Official Status</p>
                 <p className="text-sm text-blue-700 font-medium">No Assessment fee till 31 Dec. Apply Now!</p>
               </div>
             </div>
@@ -218,8 +218,8 @@ const App: React.FC = () => {
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !isLoading && setIsApplyModalOpen(false)}></div>
       <div className="relative bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
         <div className="bg-blue-700 p-8 text-white relative shrink-0">
-          <h2 className="text-2xl font-serif font-bold mb-2">Medical Profile Assessment</h2>
-          <p className="text-blue-100 text-sm">Target: {selectedCountry?.name || 'Global Medical Career'}</p>
+          <h2 className="text-2xl font-serif font-bold mb-2">Profile Assessment</h2>
+          <p className="text-blue-100 text-sm">Target: {selectedCountry?.name || 'Global Career'}</p>
           <button onClick={() => setIsApplyModalOpen(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition p-2 rounded-full hover:bg-white/10">✕</button>
         </div>
         <div className="p-8 overflow-y-auto">
@@ -227,7 +227,7 @@ const App: React.FC = () => {
             <div className="text-center py-12 animate-in fade-in duration-500">
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">⚕️</div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">Registration Logged!</h3>
-              <p className="text-slate-600">A licensing expert will contact you via WhatsApp to discuss your specific medical pathway.</p>
+              <p className="text-slate-600">A licensing expert will contact you via WhatsApp to discuss your specific pathway.</p>
             </div>
           ) : (
             <form onSubmit={async (e) => { e.preventDefault(); setIsLoading(true); await new Promise(r => setTimeout(r, 1500)); setIsLoading(false); setIsSubmitted(true); setTimeout(() => { setIsApplyModalOpen(false); setIsSubmitted(false); }, 3000); }} className="space-y-8">
@@ -244,11 +244,11 @@ const App: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
                   <span className="w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center mr-3 text-sm">02</span>
-                  Medical Goal
+                  Professional Goal
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <select name="profession" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-blue-500">
-                    <option value="">Clinical Role</option>
+                    <option value="">Role</option>
                     <option value="MBBS">MBBS Doctor</option>
                     <option value="BDS">Dentist</option>
                     <option value="Paramedic">Paramedic / Paramedical</option>
@@ -425,11 +425,11 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex justify-between items-center">
           <button onClick={() => setSelectedCountry(null)} className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
-            <span className="text-2xl font-serif font-bold tracking-tight text-slate-800">NextStep <span className="text-blue-700">Medical</span></span>
+            <span className="text-2xl font-serif font-bold tracking-tight text-slate-800">NextStep <span className="text-blue-700">Consultancy</span></span>
           </button>
           <div className="hidden md:flex space-x-8 font-medium text-slate-600">
             <button onClick={() => scrollToSection('destinations')} className="hover:text-blue-700 transition">Destinations</button>
-            <button onClick={() => scrollToSection('services')} className="hover:text-blue-700 transition">Medical Services</button>
+            <button onClick={() => scrollToSection('services')} className="hover:text-blue-700 transition">Services</button>
             <button onClick={() => scrollToSection('contact')} className="hover:text-blue-700 transition">Contact</button>
           </div>
           <button onClick={() => setIsApplyModalOpen(true)} className="bg-blue-700 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-800 transition shadow-lg shadow-blue-500/20">Consult Now</button>
@@ -441,9 +441,9 @@ const App: React.FC = () => {
           <section className="relative py-28 bg-slate-950 text-white overflow-hidden">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/medical-icons.png')] opacity-10"></div>
             <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
-              <span className="inline-block py-1 px-4 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold mb-6 border border-blue-500/20 uppercase tracking-widest">Global Medical Specialization</span>
-              <h1 className="text-6xl md:text-8xl font-serif font-bold mb-8 leading-none tracking-tighter">Clinical Careers <br /><span className="text-blue-500">Without Borders.</span></h1>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-12">Peshawar's elite medical consultancy. Expert pathways for IMGs and Paramedics to Germany, Sweden, Italy, and Canada.</p>
+              <span className="inline-block py-1 px-4 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold mb-6 border border-blue-500/20 uppercase tracking-widest">Global Specialization Experts</span>
+              <h1 className="text-6xl md:text-8xl font-serif font-bold mb-8 leading-none tracking-tighter">Careers <br /><span className="text-blue-500">Without Borders.</span></h1>
+              <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-12">Peshawar's elite career consultancy. Expert pathways for professionals and paramedics to Germany, Sweden, Italy, and Canada.</p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <button onClick={() => setIsApplyModalOpen(true)} className="bg-white text-slate-950 px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-50 transition shadow-2xl">Start Your Assessment</button>
                 <button onClick={openWhatsApp} className="bg-green-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-green-700 transition flex items-center justify-center shadow-2xl">💬 WhatsApp Expert</button>
@@ -454,8 +454,8 @@ const App: React.FC = () => {
           <section id="destinations" className="py-24">
             <div className="max-w-7xl mx-auto px-4">
               <div className="text-center mb-16">
-                <h2 className="text-4xl font-serif font-bold text-slate-900 mb-4">Medical Destinations</h2>
-                <p className="text-slate-600">Explore real-time application status for the world's best healthcare hubs.</p>
+                <h2 className="text-4xl font-serif font-bold text-slate-900 mb-4">Destinations</h2>
+                <p className="text-slate-600">Explore real-time application status for global career hubs.</p>
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
                 {countries.map((country) => (
@@ -482,7 +482,7 @@ const App: React.FC = () => {
           <section id="services" className="py-24 bg-white">
             <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
               <div>
-                <h2 className="text-5xl font-serif font-bold text-slate-900 mb-8 leading-tight">Elite Clinical <br /> Coaching & Strategy</h2>
+                <h2 className="text-5xl font-serif font-bold text-slate-900 mb-8 leading-tight">Elite Professional <br /> Coaching & Strategy</h2>
                 <p className="text-lg text-slate-600 mb-10 leading-relaxed">From Anabin degree validation and Approbation training in Germany to paramedic admissions in Italy, we provide end-to-end strategic support.</p>
                 <div className="grid gap-6">
                   {services.map((s, idx) => (
@@ -501,7 +501,7 @@ const App: React.FC = () => {
                 <div className="absolute inset-0 bg-blue-900/10"></div>
                 <div className="absolute bottom-8 left-8 right-8 bg-white/90 backdrop-blur p-8 rounded-3xl border border-white/20">
                     <p className="text-slate-900 font-bold text-lg mb-1">Direct Admission Access</p>
-                    <p className="text-slate-600 text-sm italic">Connected to official medical boards and DAAD scholarship portals.</p>
+                    <p className="text-slate-600 text-sm italic">Connected to official professional boards and scholarship portals.</p>
                 </div>
               </div>
             </div>
@@ -515,9 +515,9 @@ const App: React.FC = () => {
             <div className="md:col-span-1">
               <div className="flex items-center space-x-2 mb-8">
                 <div className="w-10 h-10 bg-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
-                <span className="text-2xl font-serif font-bold tracking-tight">NextStep <span className="text-blue-700">Medical</span></span>
+                <span className="text-2xl font-serif font-bold tracking-tight">NextStep <span className="text-blue-700">Consultancy</span></span>
               </div>
-              <p className="text-slate-500 mb-8 leading-relaxed">Peshawar's specialized medical career partner. Professional registration and study consultancy.</p>
+              <p className="text-slate-500 mb-8 leading-relaxed">Peshawar's specialized foreign career partner. Professional registration and study consultancy.</p>
               
               <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Our Founder</h4>
@@ -553,7 +553,7 @@ const App: React.FC = () => {
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold mb-8 text-lg">Quick Clinical Links</h4>
+                <h4 className="font-bold mb-8 text-lg">Quick Links</h4>
                 <ul className="space-y-4 text-slate-400">
                   <li><a href="https://www.daad.de/en/" target="_blank" className="hover:text-white transition">DAAD Admissions</a></li>
                   <li><button onClick={() => { const s = countries.find(c => c.code === 'SE'); if(s) setSelectedCountry(s); }} className="hover:text-white transition">Sweden Socialstyrelsen</button></li>
@@ -566,7 +566,7 @@ const App: React.FC = () => {
             <div className="md:col-span-1">
               <div className="bg-blue-700/10 border border-blue-500/20 p-8 rounded-[32px]">
                 <h4 className="font-bold mb-4">Register Interest</h4>
-                <p className="text-sm text-slate-400 mb-6">Partnered with European medical boards for seamless Approbation processing.</p>
+                <p className="text-sm text-slate-400 mb-6">Partnered with European boards for seamless registration processing.</p>
                 <button onClick={() => setIsApplyModalOpen(true)} className="w-full bg-blue-700 text-white font-bold py-4 rounded-2xl hover:bg-blue-800 transition shadow-lg shadow-blue-500/20">
                   Assess My Profile
                 </button>
@@ -574,7 +574,7 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="pt-12 border-t border-white/5 text-center text-slate-600 text-sm">
-            © 2024 NextStep Medical Abroad. Specialized Medical Career & Study Consulting.
+            © 2024 NextStep Consultancy Abroad. Specialized Foreign Career & Study Consulting.
           </div>
         </div>
       </footer>
